@@ -1,0 +1,30 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model ElectricCars {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  brand           String
+  model           String
+  accelSec        Float?
+  topSpeedKmH     Int?
+  rangeKm         Int?
+  efficiencyWhKm  Float?
+  fastChargeKmH   Float?
+  rapidCharge     Boolean?
+  powerTrain      String?
+  plugType        String?
+  bodyStyle       String?
+  segment         String?
+  seats           Int?
+  priceEuro       Float?
+  releaseDate     DateTime?
+  status          String @default("active")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
