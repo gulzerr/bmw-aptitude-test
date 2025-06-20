@@ -30,7 +30,7 @@ const GridPage = () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [rowData, setRowData] = useState<any[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [columnDefs, setColumnDefs] = useState<any[]>([]); // Set manual columns by default
+  const [columnDefs, setColumnDefs] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -38,138 +38,121 @@ const GridPage = () => {
   const [filterType, setFilterType] = useState<FilterType>("contains");
   const [filterValue, setFilterValue] = useState("");
 
+  const ACTIONS_COLUMN_DEF = {
+    headerName: "Actions",
+    field: "actions",
+    sortable: false,
+    filter: false,
+    pinned: "right",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    cellRenderer: (params: any) => (
+      <div style={{ display: "flex", gap: 8 }}>
+        <Button
+          variant="contained"
+          size="small"
+          onClick={() =>
+            navigate(`/details/${params.data.id}`, {
+              state: { itemData: params.data },
+            })
+          }
+        >
+          Details
+        </Button>
+        <Button
+          variant="outlined"
+          color="error"
+          size="small"
+          onClick={async () => {
+            if (
+              window.confirm(
+                `Are you sure you want to delete "${params.data.brand} ${params.data.model}"?`
+              )
+            ) {
+              try {
+                await axios.delete(
+                  `${API_BASE_URL}/api/electric-cars/delete/${params.data.id}`
+                );
+                fetchCarData();
+              } catch (err) {
+                alert(`Failed to delete the car.${err}`);
+              }
+            }
+          }}
+        >
+          Delete
+        </Button>
+      </div>
+    ),
+    width: 160,
+    minWidth: 120,
+    maxWidth: 200,
+    cellStyle: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      height: "100%",
+    },
+  };
+
   const fetchCarData = useCallback(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     async (searchParams?: any) => {
+      setLoading(true);
+      setError(null);
       try {
-        setLoading(true);
-
         let url = `${API_BASE_URL}/api/electric-cars/search`;
         if (searchParams) {
           url += "?" + new URLSearchParams(searchParams).toString();
         }
-
-        console.log("Fetching data from:", url);
         const response = await axios.get(url);
-        console.log("API response:", response.data);
+        const data = response.data.data;
+        setRowData(data);
 
-        const manualColumnDefs = [
-          {
-            field: "brand",
-            headerName: "Brand",
+        if (data.length > 0) {
+          const dynamicCols = Object.keys(data[0]).map((key) => ({
+            field: key,
+            headerName: key
+              .replace(/([A-Z])/g, " $1")
+              .replace(/^./, (str) => str.toUpperCase()),
             sortable: true,
             filter: true,
             resizable: true,
-            width: 120,
-          },
-          {
-            field: "model",
-            headerName: "Model",
-            sortable: true,
-            filter: true,
-            resizable: true,
-          },
-          {
-            field: "rangeKm",
-            headerName: "Range (km)",
-            sortable: true,
-            filter: true,
-            resizable: true,
-            width: 150,
-          },
-          {
-            field: "priceEuro",
-            headerName: "Price (€)",
-            sortable: true,
-            filter: true,
-            resizable: true,
-          },
-          {
-            field: "accelSec",
-            headerName: "0-100 (s)",
-            sortable: true,
-            filter: true,
-            resizable: true,
-            width: 120,
-          },
-          {
-            field: "topSpeedKmH",
-            headerName: "Top Speed (km/h)",
-            sortable: true,
-            filter: true,
-            resizable: true,
-          },
-          {
-            headerName: "Actions",
-            field: "actions",
-            sortable: false,
-            filter: false,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            cellRenderer: (params: any) => {
-              return (
-                <div style={{ display: "flex", gap: 8 }}>
-                  <Button
-                    variant="contained"
-                    size="small"
-                    onClick={() =>
-                      navigate(`/details/${params.data.id}`, {
-                        state: { itemData: params.data },
-                      })
-                    }
-                  >
-                    Details
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    color="error"
-                    size="small"
-                    onClick={async () => {
-                      if (
-                        window.confirm(
-                          `Are you sure you want to delete "${params.data.brand} ${params.data.model}"?`
-                        )
-                      ) {
-                        try {
-                          await axios.delete(
-                            `${API_BASE_URL}/api/electric-cars/delete/${params.data.id}`
-                          );
-                          fetchCarData();
-                        } catch (err) {
-                          alert(`Failed to delete the car.${err}`);
-                        }
-                      }
-                    }}
-                  >
-                    Delete
-                  </Button>
-                </div>
-              );
+            minWidth: 160,
+            ...(key === "releaseDate"
+              ? {
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  valueFormatter: (params: any) =>
+                    new Date(params.value).toLocaleDateString(),
+                }
+              : {}),
+            cellStyle: {
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              textAlign: "center",
+              height: "100%",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
             },
-          },
-        ];
-        if (
-          response.data &&
-          response.data.data &&
-          Array.isArray(response.data.data)
-        ) {
-          setRowData(response.data.data);
-          setColumnDefs(manualColumnDefs);
+          }));
+          setColumnDefs([...dynamicCols, ACTIONS_COLUMN_DEF]);
         } else {
-          setError("Invalid data format received from API");
-          console.error(
-            "API response format is not as expected:",
-            response.data
-          );
+          setColumnDefs([ACTIONS_COLUMN_DEF]);
         }
       } catch (err) {
-        console.error("Error fetching data:", err);
-        setError("Failed to fetch data from API");
+        setError(`Failed to fetch data ${err}`);
       } finally {
         setLoading(false);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [navigate]
   );
+
+  useEffect(() => {
+    fetchCarData();
+  }, [fetchCarData]);
 
   const fetchFilteredData = useCallback(async () => {
     try {
@@ -182,10 +165,8 @@ const GridPage = () => {
       };
 
       const url = `${API_BASE_URL}/api/electric-cars/filter`;
-      console.log("Filtering data with params:", filterParams);
 
       const response = await axios.get(url, { params: filterParams });
-      console.log("Filter API response:", response.data);
 
       if (
         response.data &&
@@ -207,11 +188,6 @@ const GridPage = () => {
       setLoading(false);
     }
   }, [filterField, filterType, filterValue]);
-
-  useEffect(() => {
-    console.log("GridPage mounted, fetching initial data...");
-    fetchCarData();
-  }, []);
 
   const handleSearch = () => {
     fetchCarData({ keyword: searchTerm });
@@ -341,38 +317,43 @@ const GridPage = () => {
           </Typography>
         </Paper>
       ) : (
-        <div
+        <Box
           className="ag-theme-material"
-          style={{ height: 500, width: "100%" }}
+          sx={{
+            width: "100%",
+            minWidth: 900,
+            height: 600,
+            overflowX: "auto",
+          }}
         >
           <AgGridReact
             rowData={rowData}
             columnDefs={columnDefs}
-            headerHeight={45}
             pagination={true}
             paginationPageSize={10}
             animateRows={true}
             rowSelection="single"
-            domLayout="autoHeight"
             defaultColDef={{
               sortable: true,
               filter: true,
               resizable: true,
-              headerClass: "ag-header-cell-label",
               cellStyle: {
-                textAlign: "center",
-                // justifyContent: "center",
-                alignItems: "center",
                 display: "flex",
+                alignItems: "center",
+                height: "100%",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
               },
+              headerClass: "ag-center-header",
+              minWidth: 160,
             }}
-            rowHeight={45}
-            onGridReady={(params) => {
-              console.log("Grid is ready");
-              params.api.sizeColumnsToFit();
-            }}
+            rowHeight={56}
+            headerHeight={56}
+            suppressHorizontalScroll={false}
+            domLayout="normal"
           />
-        </div>
+        </Box>
       )}
     </Container>
   );

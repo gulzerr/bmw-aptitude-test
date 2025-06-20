@@ -1,5 +1,23 @@
 import prisma from "../../utils/db";
 
+const selectFields = {
+  brand: true,
+  model: true,
+  accelSec: true,
+  topSpeedKmH: true,
+  efficiencyWhKm: true,
+  rangeKm: true,
+  fastChargeKmH: true,
+  rapidCharge: true,
+  powerTrain: true,
+  plugType: true,
+  bodyStyle: true,
+  segment: true,
+  seats: true,
+  priceEuro: true,
+  releaseDate: true,
+};
+
 export async function fetchElectriCars(opts: { keyword?: string }) {
   const { keyword } = opts;
 
@@ -21,6 +39,7 @@ export async function fetchElectriCars(opts: { keyword?: string }) {
 
   const cars = await prisma.electricCars.findMany({
     where,
+    select: selectFields,
   });
 
   return cars;
@@ -72,6 +91,7 @@ export async function filterElectriCars(opts: {
   console.log(where);
   const cars = await prisma.electricCars.findMany({
     where,
+    select: selectFields,
   });
 
   return cars;
